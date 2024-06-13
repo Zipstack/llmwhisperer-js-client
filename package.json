@@ -1,0 +1,15 @@
+{
+  "name": "llmwhisperer",
+  "version": "0.1.0",
+  "description": "LLMWhisper JS Client",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Zipstack Inc. <devsupport@zipstack.com>",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "~1.7.2",
+    "winston": "~3.13.0"
+  }
+}
