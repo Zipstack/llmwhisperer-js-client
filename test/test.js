@@ -1,6 +1,5 @@
 var LLMWhispererClient = require('../index').LLMWhispererClient;
 
-//const client = new LLMWhispererClient({apiKey:'c9b97420112f4c2aadae6fbda060680b'});
 const client = new LLMWhispererClient();
 
 
