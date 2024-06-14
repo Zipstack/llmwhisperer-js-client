@@ -13,24 +13,25 @@ npm install llmwhisperer-client
 ```
 
 ## Environment Variables
+
 These environment variables can be used to configure the client but are **optional**. You may use them to override the default values. If `LLMWHISPERER_API_KEY` is not set, you must provide the API key in the options object when creating a new client.
 
-* `LLMWHISPERER_API_KEY`: The API key to use for authenticating requests to the API.
-* `LLMWHISPERER_BASE_URL` : The base URL of the API.
-* `LLMWHISPERER_LOG_LEVEL` : The logging level to use. Possible values are `error`, `warn`, `info`, `debug`
+- `LLMWHISPERER_API_KEY`: The API key to use for authenticating requests to the API.
+- `LLMWHISPERER_BASE_URL` : The base URL of the API.
+- `LLMWHISPERER_LOG_LEVEL` : The logging level to use. Possible values are `error`, `warn`, `info`, `debug`
 
 ## Usage
 
 ```javascript
-const {LLMWhispererClient} = require('llmwhisperer-client');
+const { LLMWhispererClient } = require("llmwhisperer-client");
 
 // Create a new client
 
 const options = {
-    baseUrl: '<base URL>',
-    apiKey: '<API key>',
-    apiTimeout: 200,
-    loggingLevel: 'info'
+  baseUrl: "<base URL>",
+  apiKey: "<API key>",
+  apiTimeout: 200,
+  loggingLevel: "info",
 };
 
 // All the option keys are optional

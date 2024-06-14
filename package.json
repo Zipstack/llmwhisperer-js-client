@@ -4,12 +4,30 @@
   "description": "LLMWhisper JS Client",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "format": "prettier --ignore-unknown --cache --check .",
+    "format:write": "prettier --ignore-unknown --write .",
+    "lint": "eslint --cache '*.{js,ts,tsx}'",
+    "prepare": "husky"
   },
   "author": "Zipstack Inc. <devsupport@zipstack.com>",
   "license": "MIT",
   "dependencies": {
     "axios": "~1.7.2",
     "winston": "~3.13.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.4.0",
+    "eslint": "^9.4.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-turbo": "^1.13.3",
+    "globals": "^15.4.0",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.5",
+    "madge": "^7.0.0",
+    "prettier": "^3.2.5",
+    "prettier-plugin-organize-imports": "^3.2.4"
+  },
+  "lint-staged": {
+    "(!/docs/*).{js,jsx,ts,tsx,md}": "prettier --write"
   }
 }
