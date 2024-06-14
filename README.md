@@ -9,7 +9,7 @@ Refer to the client documentation for more information: [LLMWhisperer Client Doc
 ## Installation
 
 ```bash
-npm install llmwhisperer
+npm install llmwhisperer-client
 ```
 
 ## Environment Variables
@@ -22,11 +22,11 @@ These environment variables can be used to configure the client but are **option
 ## Usage
 
 ```javascript
-const LLMWhisperer = require('llmwhisperer');
+const {LLMWhispererClient} = require('llmwhisperer-client');
 
 // Create a new client
 
-options = {
+const options = {
     baseUrl: '<base URL>',
     apiKey: '<API key>',
     apiTimeout: 200,
@@ -35,9 +35,9 @@ options = {
 
 // All the option keys are optional
 // apiKey is required if LLMWHISPERER_API_KEY environment variable is not set
-const client = new LLMWhisperer(options);
+const client = new LLMWhispererClient(options);
 //or
-const client = new LLMWhisperer();
+const client = new LLMWhispererClient();
 
 // Use the client to interact with the API
 ```
