@@ -30,5 +30,8 @@
   "lint-staged": {
     "(!/docs/*).{js,jsx,ts,tsx,md}": "prettier --write"
   },
-  "repository.url": "https://github.com/Zipstack/llmwhisperer-js-client"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zipstack/llmwhisperer-js-client"
+  }
 }
