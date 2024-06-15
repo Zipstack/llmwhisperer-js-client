@@ -1,9 +1,5 @@
 # LLMWhisperer
 
-[![NPM Version](https://img.shields.io/npm/v/llamaindex)](https://www.npmjs.com/package/llmwhisperer-client)
-[![NPM License](https://img.shields.io/npm/l/llamaindex)](https://www.npmjs.com/package/llmwhisperer-client)
-[![NPM Downloads](https://img.shields.io/npm/dm/llamaindex)](https://www.npmjs.com/package/llmwhisperer-client)
-
 LLMs are powerful, but their output is as good as the input you provide. LLMWhisperer is a technology that presents data from complex documents (different designs and formats) to LLMs in a way that they can best understand. LLMWhisperer features include Layout Preserving Mode, Auto-switching between native text and OCR modes, proper representation of radio buttons and checkboxes in PDF forms as raw text, among other features. You can now extract raw text from complex PDF documents or images without having to worry about whether the document is a native text document, a scanned image or just a picture clicked on a smartphone. Extraction of raw text from invoices, purchase orders, bank statements, etc works easily for structured data extraction with LLMs powered by LLMWhisperer's Layout Preserving mode.
 
 This is a JavaScript client for the LLMWhisper API.
