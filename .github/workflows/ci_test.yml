@@ -18,5 +18,10 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
+      - name: Create test env
+        shell: bash
+        run: |
+          cp test/sample.env .env
+          sed -i "s|LLMWHISPERER_API_KEY=|LLMWHISPERER_API_KEY=${{ secrets.LLMWHISPERER_API_KEY }}|" .env
       - run: npm ci
       - run: npm test
