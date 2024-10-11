@@ -1,168 +1,142 @@
-# LLMWhispererClient Module
+# LLMWhisperer JavaScript Client
 
-## Overview
-This module provides the `LLMWhispererClient` class to interact with the LLMWhisperer API and the `LLMWhispererClientException` class to handle exceptions that may occur during API interactions.
+:::note
+This documentation is for the V2 version of the LLMWhisperer API. The corresponding Javascript/NodeJS client version is `2.x.y`. V1 and V2 are not backward compatible.
+:::
 
+This Javascript client provides a simple and efficient way to interact with the LLMWhisperer API. LLMWhisperer is a technology that presents data from complex documents (different designs and formats) to LLMs in a way that they can best understand.
+
+## Features
+
+- Easy to use Javascript interface.
+- Handles all the HTTP requests and responses for you.
+- Raises Javascript exceptions for API errors.
+
+## Installation
+
+```bash
+npm install llmwhisperer-client
+```
 
 ## Environment Variables
-These environment variables can be used to configure the client but are **optional**. You may use them to override the default values. If `LLMWHISPERER_API_KEY` is not set, you must provide the API key in the options object when creating a new client.
+| Variable | Description |
+| --- | --- |
+| LLMWHISPERER_BASE_URL_V2 | The base URL of the API. When left undefined, default `https://llmwhisperer-api.unstract.com/api/v2` is used |
+| LLMWHISPERER_API_KEY | The API key to use for authenticating requests to the API. |
+| LLMWHISPERER_LOGGING_LEVEL | The logging level to use. Possible values are `error`, `warn`, `info`, `debug` |
 
-* `LLMWHISPERER_API_KEY`: The API key to use for authenticating requests to the API.
-* `LLMWHISPERER_BASE_URL` : The base URL of the API.
-* `LLMWHISPERER_LOG_LEVEL` : The logging level to use. Possible values are `error`, `warn`, `info`, `debug`
+All environment variables are optional. If `LLMWHISPERER_API_KEY` is not set, you must provide the API key when creating a new client. The environment variables can be overridden by providing the values in the client constructor.
 
-## Classes
-
-### LLMWhispererClientException
-This class extends the built-in `Error` class to handle exceptions specific to the LLMWhisperer API.
-
-#### Constructor
-- `constructor(message, statusCode)`
-  - `message` (string): The error message.
-  - `statusCode` (number): The HTTP status code.
-
-#### Methods
-- `errorMessage()`
-  - Returns the error message.
-
-### LLMWhispererClient
-Represents a client for the LLMWhisperer API.
-
-#### Constructor
-- `constructor({ baseUrl = '', apiKey = '', apiTimeout = 120, loggingLevel = '' } = {})`
-  - `baseUrl` (string): The base URL for the API.
-  - `apiKey` (string): The API key for authentication.
-  - `apiTimeout` (number): The timeout duration for API requests, in seconds.
-  - `loggingLevel` (string): The logging level (e.g., 'debug', 'info', 'warn', 'error').
-
-#### Properties
-- `baseUrl` (string): The base URL for the API.
-- `apiKey` (string): The API key used for authentication.
-- `apiTimeout` (number): The timeout for API requests.
-- `loggingLevel` (string): The logging level for the client.
-- `logger` (Object): The logger used by the client, initialized in the constructor.
-
-## Methods
-
-### getUsageInfo
-Retrieves usage information from the API.
-
-- `async getUsageInfo()`
-  - **Returns**: A promise that resolves to an object containing usage information.
-
-### whisper
-Processes a file using the whisper API.
-
-- `async whisper({ filePath = '', url = '', processingMode = 'ocr', outputMode = 'line-printer', pageSeparator = '<<<', forceTextProcessing = false, pagesToExtract = '', timeout = 200, storeMetadataForHighlighting = false, medianFilterSize = 0, gaussianBlurRadius = 0, ocrProvider = 'advanced', lineSplitterTolerance = 0.4, horizontalStretchFactor = 1.0 } = {})`
-  - `filePath` (string): The path to the file to be processed.
-  - `url` (string): The URL of the file to be processed.
-  - `processingMode` (string): The mode of processing, e.g., 'ocr'.
-  - `outputMode` (string): The mode of output, e.g., 'line-printer'.
-  - `pageSeparator` (string): The separator for pages in the output.
-  - `forceTextProcessing` (boolean): Whether to force text processing.
-  - `pagesToExtract` (string): The specific pages to extract.
-  - `timeout` (number): The timeout for the request, in seconds.
-  - `storeMetadataForHighlighting` (boolean): Whether to store metadata for highlighting.
-  - `medianFilterSize` (number): The size of the median filter.
-  - `gaussianBlurRadius` (number): The radius of the Gaussian blur.
-  - `ocrProvider` (string): The OCR provider to use.
-  - `lineSplitterTolerance` (number): The tolerance for splitting lines.
-  - `horizontalStretchFactor` (number): The horizontal stretch factor.
-  - **Returns**: A promise that resolves to the response from the whisper API.
-  - **Throws**: `LLMWhispererClientException` if there is an error in the request.
-
-### whisperStatus
-Retrieves the status of a whisper operation using the provided whisper hash.
-
-- `async whisperStatus(whisperHash)`
-  - `whisperHash` (string): The hash of the whisper operation whose status is to be retrieved.
-  - **Returns**: A promise that resolves with an object containing the status of the whisper operation.
-  - **Throws**: `LLMWhispererClientException` if an error occurs during the operation.
-
-### whisperRetrieve
-Retrieves the result of a whisper operation using the provided whisper hash.
-
-- `async whisperRetrieve(whisperHash)`
-  - `whisperHash` (string): The hash of the whisper operation whose result is to be retrieved.
-  - **Returns**: A promise that resolves with an object containing the result of the whisper operation.
-  - **Throws**: `LLMWhispererClientException` if an error occurs during the operation.
-
-### highlightData
-Highlights the specified text in the result of a whisper operation using the provided whisper hash.
-
-- `async highlightData(whisperHash, searchText)`
-  - `whisperHash` (string): The hash of the whisper operation whose result is to be highlighted.
-  - `searchText` (string): The text to be highlighted.
-  - **Returns**: A promise that resolves with an object containing the response from the highlight operation.
-  - **Throws**: `LLMWhispererClientException` if an error occurs during the operation.
-
-## Usage Example
-Setup the client and use it to interact with the API.
-```javascript
-const { LLMWhispererClient, LLMWhispererClientException } = require('llmwhisperer');
-
-const client = new LLMWhispererClient({ apiKey: 'your-api-key' });
-```
-
-Let's get the usage information
+## Usage
 
 ```javascript
-(async () => {
-    try {
-        const usageInfo = await client.getUsageInfo();
-        console.log('Usage Info:', usageInfo);
-    } catch (error) {
-        if (error instanceof LLMWhispererClientException) {
-            console.error('LLMWhispererClientException:', error.errorMessage());
-        } else {
-            console.error('Unexpected Error:', error);
-        }
-    }
-})();
+const { LLMWhispererClientV2 } = require("llmwhisperer-client");
+
+// Create a new client
+
+const options = {
+  baseUrl: "<base URL>",
+  apiKey: "<API key>",
+  loggingLevel: "info",
+};
+
+// All the option keys are optional
+// apiKey is required if LLMWHISPERER_API_KEY environment variable is not set
+const client = new LLMWhispererClientV2(options);
+//or
+const client = new LLMWhispererClientV2();
+
 ```
 
-Let's process a file using the whisper API
+### Manual polling for the result
 
 ```javascript
-(async () => {
-    try {
-        const whisperResponse = await client.whisper({ filePath: 'path/to/file.pdf' });
-        console.log('Whisper Response:', whisperResponse);
-    } catch (error) {
-        if (error instanceof LLMWhispererClientException) {
-            console.error('LLMWhispererClientException:', error.errorMessage());
-        } else {
-            console.error('Unexpected Error:', error);
-        }
-    }
-})();
+// Simplest use with a file path as input
+whisper = await client.whisper({
+  filePath: 'sample_files/restaurant_invoice_photo.pdf'
+});
+// or with more options set
+whisper = await client.whisper({
+    filePath: 'sample_files/credit_card.pdf',
+    mode: 'high_quality',
+    pagesToExtract: '1-2',
+});
+
+// Poll for the status
+// whisper_hash is available in the 'whisper_hash' field of the result of the whisper operation
+whisper_status = await client.whisperStatus(whisper.whisper_hash);
+
+// Retrieve the result
+whisper_result = await client.whisperRetrieve(whisper.whisper_hash);
 ```
 
-LLMWhisperer supports async extractions. So when a timeout occurs, LLMWhisperer will return `202` status code along with a whisper-hash. You can use this hash to check the status of the extraction. Once the extraction is complete, you can retrieve the result.
-
-> Note that there is a system-wide timeout of 200 seconds and if the extraction is not complete within this time, the extraction will switch to async mode and you will have to use the retrieve method to fetch the extracted text
+### Wait for completion in sync mode
+Note that this is a blocking call and will wait for the extraction to complete.
 
 ```javascript
 whisper = await client.whisper({
-        filePath: 'sample_files/credit_card.pdf',
-        timeout: 1, //Forcing a 1 second timeout for testing
-    });
-//Keep checking the status until it is completed
-statusX = whisper.status;
-while (statusX === 'processing') {
-    console.log('Processing... '+whisper['whisper-hash']);
-    //Let's check every second
-    await new Promise(r => setTimeout(r, 1000));
-    whisperStatus = await client.whisperStatus(whisper['whisper-hash']);
-    statusX = whisperStatus.status;
+    filePath: 'sample_files/restaurant_invoice_photo.pdf',
+    waitForCompletion: true,
+    waitTimeout: 120,
+});
+```
+## API
+
+The LLMWhisperer provides the following methods which are analogous to the API endpoints:
+
+- `whisper`: Performs a whisper operation.
+- `whisperStatus`: Retrieves the status of a whisper operation.
+- `whisperRetrieve`: Retrieves the result of a whisper operation.
+- `getUsageInfo`: Retrieves the usage information of the LLMWhisperer API.
+- `registerWebhook`: Registers a webhook URL for receiving whisper results.
+- `getWebhookDetails`: Retrieves the details of a registered webhook.
+
+## Error Handling
+
+Errors are handled by the LLMWhispererClientException class. This class extends the built-in Error class and adds a `statusCode` property.
+
+## Result format
+
+### `whisper`
+
+The `whisper` method returns a dictionary 
+
+#### For Asyn operation (default)
+
+```json
+{
+    "message": "Whisper Job Accepted",
+    "status": "processing",
+    "whisper_hash": "XXX37efd|XXXXXXXe92b30823c4ed3da759ef670f",
+    "status_code": 202,
+    "extraction": {}
 }
-if (statusX === 'processed') {
-    //Retrieve the result
-    whisper = await client.whisperRetrieve(whisper['whisper-hash']);
-    console.log(whisper);
-} else {
-    console.log('Error');
+```
+The `whisper_hash` can be used to check the status of the extraction and retrieve the result. `extraction` will be empty for async operations.
+
+#### For Sync operation
+
+```json
+{
+    "message": "Whisper Job Accepted",
+    "status": "processed",
+    "whisper_hash": "XXX37efd|XXXXXXXe92b30823c4ed3da759ef670f",
+    "status_code": 200,
+    "extraction": {
+        "confidence_metadata" : [],
+        "line_metadata" : [],
+        "metadata" : {},
+        "result_text" : "<Extracted Text>",
+        "webhook_metadata" : ""
+    }
 }
 ```
 
+## Dependencies
 
+- axios: Used for making HTTP requests.
+- winston: Used for logging.
+
+## License
+
+This project is licensed under the MIT License.
