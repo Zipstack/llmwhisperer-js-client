@@ -703,6 +703,16 @@ class LLMWhispererClientV2 {
     }
   }
 
+  /**
+   * @function
+   * @name getWebhookDetails
+   * @description This function retrieves the details of a webhook.
+   * @async
+   * @param {string} webhookName - The name of the webhook.
+   * @returns {Promise<Object>} Returns a promise that resolves with an object containing the details of the webhook. The object includes the status code and the response data.
+   * @throws {LLMWhispererClientException} Throws an LLMWhispererClientException if an error occurs during the operation.
+   *
+   */
   async getWebhookDetails(webhookName) {
     const apiUrl = `${this.baseUrl}/whisper-manage-callback`;
     const params = { webhook_name: webhookName };

@@ -8,7 +8,7 @@ const client = new LLMWhispererClientV2();
 (async () => {
   // usage_info = await client.getUsageInfo();
   // console.log(usage_info);
-  //whisper = await client.whisper({filePath: 'sample_files/restaurant_invoice_photo.pdf'});
+  whisper = await client.whisper({filePath: 'data/restaurant_invoice_photo.pdf'});
   //whisper = await client.whisper({url: 'https://storage.googleapis.com/pandora-static/samples/bill.jpg.pdf'});
   // whisper = await client.whisper({
   //     filePath: 'sample_files/credit_card.pdf',
@@ -16,7 +16,7 @@ const client = new LLMWhispererClientV2();
   //     forceTextProcessing: true,
   //     pagesToExtract: '1-2',
   // });
-  //console.log(whisper);
+  console.log(whisper);
 
   //b4c25f17|5f1d285a7cf18d203de7af1a1abb0a3a
   //whisper_status = await client.whisperStatus('b4c25f17|5f1d285a7cf18d203de7af1a1abb0a3a');
@@ -37,11 +37,11 @@ const client = new LLMWhispererClientV2();
   //result = await client.getWebhookDetails('wb4');
   //console.log(result);
 
-  whisper = await client.whisper({
-    filePath: "data/restaurant_invoice_photo.pdf",
-    useWebhook: "wb4",
-    webhookMetadata: "Sample Metadata",
-  });
+//   whisper = await client.whisper({
+//     filePath: "data/restaurant_invoice_photo.pdf",
+//     useWebhook: "wb4",
+//     webhookMetadata: "Sample Metadata",
+//   });
 
   // whisper = await client.whisper({
   //     filePath: 'sample_files/credit_card.pdf',
