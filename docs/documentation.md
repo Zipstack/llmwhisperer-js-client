@@ -91,6 +91,10 @@ The LLMWhisperer provides the following methods which are analogous to the API e
 - `registerWebhook`: Registers a webhook URL for receiving whisper results.
 - `getWebhookDetails`: Retrieves the details of a registered webhook.
 
+## Helper Methods
+
+- `getHighlightRect`: Given the line metadata and the line number, this function returns the bounding box of the line
+
 ## Error Handling
 
 Errors are handled by the LLMWhispererClientException class. This class extends the built-in Error class and adds a `statusCode` property.

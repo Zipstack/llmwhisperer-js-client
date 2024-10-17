@@ -737,6 +737,38 @@ class LLMWhispererClientV2 {
       };
     }
   }
+
+  /**
+   * @function
+   * @name getHighlightRect
+   * @description Given the line metadata and the line number, this function returns the bounding box of the line
+   * @async
+   * @param {Array} lineMetadata - The line metadata returned by the LLMWhisperer API.
+   * @param {number} targetWidth - The width of your target image/page in UI.
+   * @param {number} targetHeight - The height of your target image/page in UI.
+   * @returns {Object} Returns an object containing the bounding box of the line in the format {page,x1,y1,x2,y2}
+   *
+   */
+
+  async getHighlightRect(lineMetadata, targetWidth, targetHeight) {
+    const page = lineMetadata[0];
+    const x1 = 0;
+    let y1 = lineMetadata[1] - lineMetadata[2];
+    const x2 = targetWidth;
+    let y2 = lineMetadata[1];
+    const originalHeight = lineMetadata[3];
+
+    y1 = (y1 / originalHeight) * targetHeight;
+    y2 = (y2 / originalHeight) * targetHeight;
+
+    return {
+      page: page,
+      x1: x1,
+      y1: y1,
+      x2: x2,
+      y2: y2,
+    };
+  }
 }
 
 module.exports = {
