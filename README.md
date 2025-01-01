@@ -27,7 +27,7 @@ These environment variables can be used to configure the client but are **option
 ## Usage
 
 ```javascript
-const { LLMWhispererClient } = require("llmwhisperer-client");
+const { LLMWhispererClientV2 } = require("llmwhisperer-client");
 
 // Create a new client
 
@@ -40,9 +40,9 @@ const options = {
 
 // All the option keys are optional
 // apiKey is required if LLMWHISPERER_API_KEY environment variable is not set
-const client = new LLMWhispererClient(options);
+const client = new LLMWhispererClientV2(options);
 //or
-const client = new LLMWhispererClient();
+const client = new LLMWhispererClientV2();
 
 // Use the client to interact with the API
 ```

@@ -18,7 +18,7 @@ const fs = require("fs");
 const { register } = require("module");
 
 const BASE_URL = "https://llmwhisperer-api.unstract.com/v1";
-const BASE_URL_V2 = "https://llmwhisperer-api.unstract.com/api/v2";
+const BASE_URL_V2 = "https://llmwhisperer-api.us-central.unstract.com/api/v2";
 
 class LLMWhispererClientException extends Error {
   constructor(message, statusCode) {
