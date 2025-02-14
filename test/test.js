@@ -26,21 +26,19 @@ describe("LLMWhispererClientV2", () => {
 
 
   const test_cases = [
-    ["ocr", "line-printer", "restaurant_invoice_photo.pdf"],
-    ["ocr", "line-printer", "credit_card.pdf"],
-    // ["ocr", "line-printer", "handwritten-form.pdf"],
-    // ["ocr", "text", "restaurant_invoice_photo.pdf"],
-    // ["text", "line-printer", "restaurant_invoice_photo.pdf"],
-    // ["text", "text", "handwritten-form.pdf"],
+    ["high_quality", "layout_preserving", "restaurant_invoice_photo.pdf", 99],
+    ["native_text", "layout_preserving", "credit_card.pdf", 99],
+    ["form", "layout_preserving", "handwritten-form.pdf", 99],
+    ["high_quality", "layout_preserving", "handwritten-form.pdf", 80],
   ];
 
   test.each(test_cases)(
     "whisper(%s, %s, %s)",
-    async (processing_mode, output_mode, input_file) => {
+    async (mode, output_mode, input_file, percent_simlarity) => {
       const data_dir = path.join(__dirname, "data");
       const file_path = path.join(data_dir, input_file);
       const response = await client.whisper({
-        processingMode: processing_mode,
+        mode: mode,
         outputMode: output_mode,
         filePath: file_path,
         timeout: 200,
@@ -48,7 +46,7 @@ describe("LLMWhispererClientV2", () => {
       });
 
 
-      const exp_basename = `${path.parse(input_file).name}.${processing_mode}.${output_mode}.txt`;
+      const exp_basename = `${path.parse(input_file).name}.${mode}.${output_mode}.txt`;
       const exp_file = path.join(data_dir, "expected", exp_basename);
       const expected_text = await fs.promises.readFile(exp_file, "utf-8");
 
@@ -56,38 +54,14 @@ describe("LLMWhispererClientV2", () => {
 
       const extracted_text = response.extraction.result_text
 
-
+      console.log(`Extracted Text: ${extracted_text}`);
       expect(response.status_code).toBe(200);
       const similarity = stringSimilarity.compareTwoStrings(extracted_text, expected_text);
       console.log(`Similarity: ${(similarity * 100).toFixed(2)}%`);
-      expect(similarity * 100).toBeGreaterThan(80); // Expect at least 80% match
+      expect(similarity * 100).toBeGreaterThan(percent_simlarity); // Expect at least 80% match
 
     },
     200000,
   );
 });
 
-// (async () => {
-//   // usage_info = await client.getUsageInfo();
-//   // console.log(usage_info);
-
-//   whisper_result = await client.whisper({
-//     filePath: 'data/restaurant_invoice_photo.pdf', waitForCompletion: true,
-//     waitTimeout: 120,
-//   });
-//   console.log(whisper_result);
-
-
-
-//   // whisper_result = await client.whisper({
-//   //   filePath: 'data/test.json', waitForCompletion: true,
-//   //   waitTimeout: 120,
-//   // });
-//   // console.log(whisper_result);
-
-//   //result = await client.registerWebhook('https://webhook.site/2da127b3-003f-446d-a150-7a461a099f3c','','wb4');
-//   //console.log(result);
-
-//   //result = await client.getWebhookDetails('wb4');
-//   //console.log(result);
-// })();
