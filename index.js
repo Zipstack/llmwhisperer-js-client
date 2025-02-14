@@ -11,12 +11,11 @@
  * 
 
  */
-
+require("dotenv").config();
 const axios = require("axios");
 const winston = require("winston");
 const fs = require("fs");
 const { register } = require("module");
-
 const BASE_URL = "https://llmwhisperer-api.unstract.com/v1";
 const BASE_URL_V2 = "https://llmwhisperer-api.us-central.unstract.com/api/v2";
 
@@ -374,8 +373,12 @@ class LLMWhispererClientV2 {
 
     this.headers = {
       "unstract-key": this.apiKey,
-      "Subscription-Id": "test", //TODO: Remove this line. For testing only
-      "Start-Date": "9-07-2024", //TODO: Remove this line. For testing only
+      // "Subscription-Id": "jsclient-client",
+      // "Subscription-Name": "jsclient-client",
+      // "User-Id": "jsclient-client-user",
+      // "Product-Id": "jsclient-client-product",
+      // "Product-Name": "jsclient-client-product",
+      // "Start-Date": "2024-07-09",
     };
   }
 
@@ -532,34 +535,30 @@ class LLMWhispererClientV2 {
             message["extraction"] = {};
             message["status_code"] = -1;
             message["message"] = "Whisper client operation timed out";
-            break;
+            return message;
           }
           const whisperStatus = await this.whisperStatus(whisperHash);
+          this.logger.debug(`whisperStatus: ${JSON.stringify(whisperStatus)}`);
+
           if (whisperStatus.statusCode !== 200) {
             message["extraction"] = {};
             message["status_code"] = whisperStatus.statusCode;
             message["message"] = "Whisper client operation failed";
-            break;
+            return message;
           }
-          if (whisperStatus.status === "processing") {
-            this.logger.debug("Status: processing");
-          } else if (whisperStatus.status === "delivered") {
-            this.logger.debug("Status: delivered");
-            throw new LLMWhispererClientException(
-              "Whisper operation already delivered",
-              -1,
+          if (whisperStatus.status === "accepted") {
+            this.logger.debug("Status: accepted...");
+          } else if (whisperStatus.status === "processing") {
+            this.logger.debug("Status: processing...");
+          } else if (whisperStatus.status === "error") {
+            this.logger.debug("Status: error");
+            this.logger.error(
+              "Whisper-hash: ${whisperHash} | STATUS: failed with ${whisperStatus.message}",
             );
-          } else if (whisperStatus.status === "unknown") {
-            this.logger.debug("Status: unknown");
-            throw new LLMWhispererClientException(
-              "Whisper operation status unknown",
-              -1,
-            );
-          } else if (whisperStatus.status === "failed") {
-            this.logger.debug("Status: failed");
             message["extraction"] = {};
             message["status_code"] = -1;
-            message["message"] = "Whisper client operation failed";
+            message["status"] = "error";
+            message["message"] = whisperStatus.message;
             break;
           } else if (whisperStatus.status === "processed") {
             this.logger.debug("Status: processed");
@@ -602,10 +601,13 @@ class LLMWhispererClientV2 {
    * @throws {LLMWhispererClientException} Throws an LLMWhispererClientException if an error occurs during the operation.
    */
   async whisperStatus(whisperHash) {
-    this.logger.debug("whisper_status called");
+    this.logger.debug(`whisper_status called for ${whisperHash}`);
     const url = `${this.baseUrl}/whisper-status`;
     const params = { whisper_hash: whisperHash };
     this.logger.debug(`url: ${url}`);
+    this.logger.debug(`params: ${JSON.stringify(params)}`);
+    delete this.headers["Content-Length"];
+    this.logger.debug(`headers: ${JSON.stringify(this.headers)}`);
 
     try {
       const response = await axios.get(url, {
@@ -613,14 +615,16 @@ class LLMWhispererClientV2 {
         params,
         timeout: this.apiTimeout * 1000,
       });
-
       const message = response.data;
       message.statusCode = response.status;
       return message;
     } catch (error) {
+      this.logger.debug("Hel00000000002");
+      this.logger.debug(`error: ${JSON.stringify(error)}`);
       const err = error.response
         ? error.response.data
         : { message: error.message };
+      this.logger.debug(`error: ${JSON.stringify(err)}`);
       err.statusCode = error.response ? error.response.status : -1;
       throw new LLMWhispererClientException(err.message, err.statusCode);
     }

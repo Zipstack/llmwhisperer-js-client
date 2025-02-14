@@ -1,10 +1,12 @@
+
 const fs = require("fs");
 const path = require("path");
-const LLMWhispererClient = require("../index").LLMWhispererClient;
-const client = new LLMWhispererClient({
-  apiKey: process.env.LLMWHISPERER_API_KEY,
-});
-describe("LLMWhispererClient", () => {
+const stringSimilarity = require("string-similarity");
+const LLMWhispererClientV2 = require("../index").LLMWhispererClientV2;
+
+const client = new LLMWhispererClientV2();
+
+describe("LLMWhispererClientV2", () => {
   test("get_usage_info", async () => {
     const usage_info = await client.getUsageInfo();
     console.info(usage_info);
@@ -22,74 +24,44 @@ describe("LLMWhispererClient", () => {
     );
   });
 
+
   const test_cases = [
-    ["ocr", "line-printer", "restaurant_invoice_photo.pdf"],
-    ["ocr", "line-printer", "credit_card.pdf"],
-    ["ocr", "line-printer", "handwritten-form.pdf"],
-    ["ocr", "text", "restaurant_invoice_photo.pdf"],
-    ["text", "line-printer", "restaurant_invoice_photo.pdf"],
-    ["text", "text", "handwritten-form.pdf"],
+    ["high_quality", "layout_preserving", "restaurant_invoice_photo.pdf", 99],
+    ["native_text", "layout_preserving", "credit_card.pdf", 99],
+    ["form", "layout_preserving", "handwritten-form.pdf", 99],
+    ["high_quality", "layout_preserving", "handwritten-form.pdf", 80],
   ];
 
   test.each(test_cases)(
     "whisper(%s, %s, %s)",
-    async (processing_mode, output_mode, input_file) => {
+    async (mode, output_mode, input_file, percent_simlarity) => {
       const data_dir = path.join(__dirname, "data");
       const file_path = path.join(data_dir, input_file);
       const response = await client.whisper({
-        processingMode: processing_mode,
+        mode: mode,
         outputMode: output_mode,
         filePath: file_path,
         timeout: 200,
+        waitForCompletion: true
       });
-      console.debug(response);
 
-      const exp_basename = `${path.parse(input_file).name}.${processing_mode}.${output_mode}.txt`;
+
+      const exp_basename = `${path.parse(input_file).name}.${mode}.${output_mode}.txt`;
       const exp_file = path.join(data_dir, "expected", exp_basename);
-      const exp = await fs.promises.readFile(exp_file, "utf-8");
+      const expected_text = await fs.promises.readFile(exp_file, "utf-8");
 
       expect(typeof response).toBe("object");
-      expect(response.statusCode).toBe(200);
-      // expect(response.extracted_text).toBe(exp);
+
+      const extracted_text = response.extraction.result_text
+
+      console.log(`Extracted Text: ${extracted_text}`);
+      expect(response.status_code).toBe(200);
+      const similarity = stringSimilarity.compareTwoStrings(extracted_text, expected_text);
+      console.log(`Similarity: ${(similarity * 100).toFixed(2)}%`);
+      expect(similarity * 100).toBeGreaterThan(percent_simlarity); // Expect at least 80% match
+
     },
     200000,
   );
-
-  // TODO: Review and port to Jest based tests
-  test.skip("whisper", () => {
-    // response = client.whisper(
-    //   'https://storage.googleapis.com/pandora-static/samples/bill.jpg.pdf'
-    // );
-    const response = client.whisper("test_files/restaurant_invoice_photo.pdf", {
-      timeout: 200,
-      store_metadata_for_highlighting: true,
-    });
-    console.info(response);
-    // expect(typeof response).toBe('object');
-  });
-
-  test.skip("whisper_status", () => {
-    const response = client.whisper_status(
-      "7cfa5cbb|5f1d285a7cf18d203de7af1a1abb0a3a",
-    );
-    console.info(response);
-    expect(typeof response).toBe("object");
-  });
-
-  test.skip("whisper_retrieve", () => {
-    const response = client.whisper_retrieve(
-      "7cfa5cbb|5f1d285a7cf18d203de7af1a1abb0a3a",
-    );
-    console.info(response);
-    expect(typeof response).toBe("object");
-  });
-
-  test.skip("whisper_highlight_data", () => {
-    const response = client.highlight_data(
-      "9924d865|5f1d285a7cf18d203de7af1a1abb0a3a",
-      "Indiranagar",
-    );
-    console.info(response);
-    expect(typeof response).toBe("object");
-  });
 });
+
