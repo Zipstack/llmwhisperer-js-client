@@ -11,7 +11,7 @@
  * 
 
  */
-require('dotenv').config()
+require("dotenv").config();
 const axios = require("axios");
 const winston = require("winston");
 const fs = require("fs");
@@ -54,7 +54,6 @@ class LLMWhispererClient {
     apiTimeout = 120,
     loggingLevel = "",
   } = {}) {
-
     const level =
       loggingLevel || process.env.LLMWHISPERER_LOGGING_LEVEL || "debug";
 
@@ -536,7 +535,7 @@ class LLMWhispererClientV2 {
             message["extraction"] = {};
             message["status_code"] = -1;
             message["message"] = "Whisper client operation timed out";
-            return message
+            return message;
           }
           const whisperStatus = await this.whisperStatus(whisperHash);
           this.logger.debug(`whisperStatus: ${JSON.stringify(whisperStatus)}`);
@@ -545,7 +544,7 @@ class LLMWhispererClientV2 {
             message["extraction"] = {};
             message["status_code"] = whisperStatus.statusCode;
             message["message"] = "Whisper client operation failed";
-            return message
+            return message;
           }
           if (whisperStatus.status === "accepted") {
             this.logger.debug("Status: accepted...");
@@ -553,7 +552,9 @@ class LLMWhispererClientV2 {
             this.logger.debug("Status: processing...");
           } else if (whisperStatus.status === "error") {
             this.logger.debug("Status: error");
-            this.logger.error('Whisper-hash: ${whisperHash} | STATUS: failed with ${whisperStatus.message}')
+            this.logger.error(
+              "Whisper-hash: ${whisperHash} | STATUS: failed with ${whisperStatus.message}",
+            );
             message["extraction"] = {};
             message["status_code"] = -1;
             message["status"] = "error";
@@ -607,8 +608,7 @@ class LLMWhispererClientV2 {
     this.logger.debug(`params: ${JSON.stringify(params)}`);
     delete this.headers["Content-Length"];
     this.logger.debug(`headers: ${JSON.stringify(this.headers)}`);
-    
-    
+
     try {
       const response = await axios.get(url, {
         headers: this.headers,
@@ -619,8 +619,7 @@ class LLMWhispererClientV2 {
       message.statusCode = response.status;
       return message;
     } catch (error) {
-
-      this.logger.debug("Hel00000000002")
+      this.logger.debug("Hel00000000002");
       this.logger.debug(`error: ${JSON.stringify(error)}`);
       const err = error.response
         ? error.response.data
