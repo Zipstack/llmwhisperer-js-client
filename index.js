@@ -435,6 +435,10 @@ class LLMWhispererClientV2 {
    * @param {string} [options.useWebhook=''] - Whether to use a webhook.
    * @param {boolean} [options.waitForCompletion=false] - Whether to wait for completion.
    * @param {number} [options.waitTimeout=180] - The timeout for waiting.
+   * @param {boolean} [addLineNos=false] - If true, adds line numbers to the extracted text
+   *                                       and saves line metadata, which can be queried later
+   *                                       using the highlights API.
+
    * @returns {Promise<Object>} The response from the whisper API.
    * @throws {LLMWhispererClientException} If there is an error in the request.
    */
@@ -459,6 +463,7 @@ class LLMWhispererClientV2 {
     useWebhook = "",
     waitForCompletion = false,
     waitTimeout = 180,
+    addLineNos = false,
   } = {}) {
     this.logger.debug("whisper called");
     const apiUrl = `${this.baseUrl}/whisper`;
@@ -482,6 +487,7 @@ class LLMWhispererClientV2 {
       use_webhook: useWebhook,
       wait_for_completion: waitForCompletion,
       wait_timeout: waitTimeout,
+      add_line_nos: addLineNos,
     };
 
     this.logger.debug(`api_url: ${apiUrl}`);
@@ -739,6 +745,65 @@ class LLMWhispererClientV2 {
         status_code: response.status,
         message: response.data,
       };
+    }
+  }
+
+  /**
+   * Retrieves the highlight information of the LLMWhisperer API.
+   *
+   * This method sends a GET request to the '/highlights' endpoint of the LLMWhisperer API.
+   * The response is a JSON object containing the usage information.
+   * Refer to https://docs.unstract.com/llm_whisperer/apis/llm_whisperer_usage_api
+   *
+   * @param {string} whisperHash - The hash of the whisper operation.
+   * @param {string} lines - Define which lines metadata to retrieve.
+   *                           Example "1-5,7,21-" retrieves lines 1,2,3,4,5,7,21,22,23,...
+   * @param {boolean} [extractAllLines=false] - If true, extract all lines.
+   * @returns {Promise<Object>} A promise that resolves with the highlight information.
+   * @throws {LLMWhispererClientException} If the API request fails.
+   */
+  async getHighlightData(whisperHash, lines, extractAllLines = false) {
+    console.debug("highlight called");
+    const url = `${this.baseUrl}/highlights`;
+
+    // Build query parameters
+    const params = new URLSearchParams({
+      whisper_hash: whisperHash,
+      lines: lines,
+      extract_all_lines: extractAllLines.toString(),
+    });
+    const finalUrl = `${url}?${params.toString()}`;
+    console.debug("url:", finalUrl);
+
+    // Set up the AbortController for timeout support
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.apiTimeout);
+
+    try {
+      const response = await fetch(finalUrl, {
+        method: "GET",
+        headers: this.headers,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        // Parse error response and throw a custom exception
+        const errorData = await response.json();
+        errorData.status_code = response.status;
+        throw new LLMWhispererClientException(errorData);
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error.name === "AbortError") {
+        // Handle request timeout
+        throw new LLMWhispererClientException({
+          message: "Request timed out",
+          status_code: 408,
+        });
+      }
+      throw error;
     }
   }
 }

@@ -63,5 +63,48 @@ describe("LLMWhispererClientV2", () => {
     },
     200000,
   );
+
+  test("highlight", async () => {
+    const dataDir = path.join(__dirname, "data");
+    const inputFile = "credit_card.pdf";
+    const filePath = path.join(dataDir, inputFile);
+
+    // Call whisper API with line numbers enabled
+    const whisperResult = await client.whisper({
+      addLineNos: true,
+      filePath: filePath,
+      waitForCompletion: true,
+    });
+
+    const whisperHash = whisperResult.whisper_hash;
+
+    // Fetch highlight data for lines 1-2
+    const highlightData = await client.getHighlightData(whisperHash, "1-2");
+
+    // Validate the response structure
+    expect(typeof highlightData).toBe("object");
+    expect(Object.keys(highlightData).length).toBe(2);
+    expect(highlightData).toHaveProperty("1");
+    expect(highlightData).toHaveProperty("2");
+
+    // Validate line 1 data
+    const line1 = highlightData["1"];
+    expect(line1.base_y).toBe(0);
+    expect(line1.base_y_percent).toBe(0);
+    expect(line1.height).toBe(0);
+    expect(line1.height_percent).toBe(0);
+    expect(line1.page).toBe(0);
+    expect(line1.page_height).toBe(0);
+    expect(line1.raw).toEqual([0, 0, 0, 0]);
+
+    // Validate line 2 data
+    const line2 = highlightData["2"];
+    expect(line2.base_y).toBe(155);
+    expect(line2.base_y_percent).toBeCloseTo(4.8927, 4); // Approximate float comparison
+    expect(line2.height).toBe(51);
+    expect(line2.height_percent).toBeCloseTo(1.6098, 4); // Approximate float comparison
+    expect(line2.page).toBe(0);
+    expect(line2.page_height).toBe(3168);
+  }, 20000); // 20-second timeout
 });
 
