@@ -435,7 +435,7 @@ class LLMWhispererClientV2 {
    * @param {string} [options.useWebhook=''] - Whether to use a webhook.
    * @param {boolean} [options.waitForCompletion=false] - Whether to wait for completion.
    * @param {number} [options.waitTimeout=180] - The timeout for waiting.
-   * @param {boolean} [addLineNos=false] - If true, adds line numbers to the extracted text
+   * @param {boolean} [options.addLineNos=false] - If true, adds line numbers to the extracted text
    *                                       and saves line metadata, which can be queried later
    *                                       using the highlights API.
 
@@ -763,47 +763,37 @@ class LLMWhispererClientV2 {
    * @throws {LLMWhispererClientException} If the API request fails.
    */
   async getHighlightData(whisperHash, lines, extractAllLines = false) {
-    console.debug("highlight called");
+    this.logger.debug("highlight called");
     const url = `${this.baseUrl}/highlights`;
 
     // Build query parameters
-    const params = new URLSearchParams({
+    const params = {
       whisper_hash: whisperHash,
       lines: lines,
-      extract_all_lines: extractAllLines.toString(),
-    });
-    const finalUrl = `${url}?${params.toString()}`;
-    console.debug("url:", finalUrl);
-
-    // Set up the AbortController for timeout support
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.apiTimeout);
+      extract_all_lines: extractAllLines,
+    };
 
     try {
-      const response = await fetch(finalUrl, {
+      const response = await axios(url, {
         method: "GET",
         headers: this.headers,
-        signal: controller.signal,
+        params: params,
       });
-      clearTimeout(timeoutId);
 
-      if (!response.ok) {
+      if (response.status != 200) {
         // Parse error response and throw a custom exception
-        const errorData = await response.json();
+        const errorData = await response.data;
         errorData.status_code = response.status;
         throw new LLMWhispererClientException(errorData);
       }
 
-      return await response.json();
+      return response.data;
     } catch (error) {
-      if (error.name === "AbortError") {
-        // Handle request timeout
-        throw new LLMWhispererClientException({
-          message: "Request timed out",
-          status_code: 408,
-        });
-      }
-      throw error;
+      const err = error.response
+        ? error.response.data
+        : { message: error.message };
+      err.statusCode = error.response ? error.response.status : -1;
+      throw new LLMWhispererClientException(err.message, err.statusCode);
     }
   }
 }
