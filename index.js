@@ -713,7 +713,6 @@ class LLMWhispererClientV2 {
     }
   }
 
-
   /**
    * @function
    * @name updateWebhookDetails
@@ -755,7 +754,6 @@ class LLMWhispererClientV2 {
       };
     }
   }
-
 
   /**
    * @function
@@ -826,7 +824,6 @@ class LLMWhispererClientV2 {
       };
     }
   }
-
 
   /**
    * Retrieves the highlight information of the LLMWhisperer API.
