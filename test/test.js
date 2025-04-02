@@ -106,5 +106,46 @@ describe("LLMWhispererClientV2", () => {
     expect(line2.page).toBe(0);
     expect(line2.page_height).toBe(3168);
   }, 20000); // 20-second timeout
+
+
+  test("webhook", async () => {
+    const url = "https://webhook.site/b76ecc5f-8320-4410-b24f-66525d2c92cb";
+    const token = "";
+    const webhookName = "llmwhisperer-js-client-test";
+    const response = await client.registerWebhook(url, token, webhookName);
+
+    expect(response).toEqual({ status_code: 201, message: { message: 'Webhook created successfully' } });
+
+    const getResponse = await client.getWebhookDetails(webhookName);
+
+    expect(getResponse).toEqual({
+      status_code: 200, message: {
+        auth_token: token, url: url, webhook_name: webhookName
+      }
+    });
+
+    const updateResponse = await client.updateWebhookDetails(webhookName, url, "new_token");
+    expect(updateResponse).toEqual({ status_code: 200, message: { message: 'Webhook updated successfully' } });
+
+    const getUpdatedResponse = await client.getWebhookDetails(webhookName);
+    expect(getUpdatedResponse).toEqual({
+      status_code: 200, message: {
+        auth_token: "new_token", url: url, webhook_name: webhookName
+      }
+    });
+
+    const deleteResponse = await client.deleteWebhookDetails(webhookName);
+    expect(deleteResponse).toEqual({ status_code: 200, message: { message: 'Webhook deleted successfully' } });
+
+    try {
+      await client.getWebhookDetails(webhookName);
+
+    } catch (e) {
+      expect(e.response.status).toBe(404);
+      expect(e.response.data.message).toBe('Webhook details not found');
+    }
+
+  }, 15000); // 15-second timeout
+
 });
 

@@ -701,6 +701,49 @@ class LLMWhispererClientV2 {
 
     const response = await axios(options);
 
+    if (response.status !== 201) {
+      const message = response.data;
+      message.statusCode = response.status;
+      throw new LLMWhispererClientException(message.message, response.status);
+    } else {
+      return {
+        status_code: response.status,
+        message: response.data,
+      };
+    }
+  }
+
+
+  /**
+   * @function
+   * @name updateWebhookDetails
+   * @description This function updates the details of a webhook.
+   * @async
+   * @param {string} webhookName - The name of the webhook.
+   * @param {string} webhookUrl - The URL of the webhook.
+   * @param {string} authToken - The authentication token for the webhook.
+   * @returns {Promise<Object>} Returns a promise that resolves with an object containing the response from the webhook details update. The object includes the status code and the response data.
+   * @throws {LLMWhispererClientException} Throws an LLMWhispererClientException if an error occurs during the operation.
+   *
+   */
+  async updateWebhookDetails(webhookName, webhookUrl, authToken) {
+    const apiUrl = `${this.baseUrl}/whisper-manage-callback`;
+    const data = {
+      webhook_name: webhookName,
+      url: webhookUrl,
+      auth_token: authToken,
+    };
+    const myHeaders = { ...this.headers, "Content-Type": "application/json" };
+    const options = {
+      method: "put",
+      url: apiUrl,
+      headers: myHeaders,
+      timeout: this.apiTimeout * 1000,
+      data: data,
+    };
+
+    const response = await axios(options);
+
     if (response.status !== 200) {
       const message = response.data;
       message.statusCode = response.status;
@@ -712,6 +755,7 @@ class LLMWhispererClientV2 {
       };
     }
   }
+
 
   /**
    * @function
@@ -747,6 +791,42 @@ class LLMWhispererClientV2 {
       };
     }
   }
+
+  /**
+   * @function
+   * @name deleteWebhookDetails
+   * @description This function deletes the details of a webhook.
+   * @async
+   * @param {string} webhookName - The name of the webhook.
+   * @returns {Promise<Object>} Returns a promise that resolves with an object containing the response from the delete operation. The object includes the status code and the response data.
+   * @throws {LLMWhispererClientException} Throws an LLMWhispererClientException if an error occurs during the operation.
+   *
+   */
+  async deleteWebhookDetails(webhookName) {
+    const apiUrl = `${this.baseUrl}/whisper-manage-callback`;
+    const params = { webhook_name: webhookName };
+    const options = {
+      method: "delete",
+      url: apiUrl,
+      headers: this.headers,
+      params: params,
+      timeout: 200 * 1000,
+    };
+
+    const response = await axios(options);
+
+    if (response.status !== 200) {
+      const message = response.data;
+      message.statusCode = response.status;
+      throw new LLMWhispererClientException(message.message, response.status);
+    } else {
+      return {
+        status_code: response.status,
+        message: response.data,
+      };
+    }
+  }
+
 
   /**
    * Retrieves the highlight information of the LLMWhisperer API.
