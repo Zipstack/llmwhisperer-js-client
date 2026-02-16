@@ -13,9 +13,10 @@
  */
 require("dotenv").config();
 const axios = require("axios");
+const axiosRetryModule = require("axios-retry");
+const axiosRetry = axiosRetryModule.default;
 const winston = require("winston");
 const fs = require("fs");
-const { register } = require("module");
 const BASE_URL = "https://llmwhisperer-api.unstract.com/v1";
 const BASE_URL_V2 = "https://llmwhisperer-api.us-central.unstract.com/api/v2";
 
@@ -39,7 +40,12 @@ class LLMWhispererClientException extends Error {
  * @param {string} [config.apiKey=''] - The API key for authentication.
  * @param {number} [config.apiTimeout=120] - The timeout duration for API requests, in seconds.
  * @param {string} [config.loggingLevel=''] - The logging level (e.g., 'debug','info', 'warn', 'error').
- 
+ * @param {number} [config.maxRetries=4] - Maximum number of retry attempts (0 to disable retries).
+ * @param {number} [config.initialDelay=2.0] - Initial delay in seconds before the first retry.
+ * @param {number} [config.maxDelay=60.0] - Maximum delay cap in seconds between retries.
+ * @param {number} [config.backoffFactor=2.0] - Exponential multiplier for retry delay.
+ * @param {number} [config.jitter=1.0] - Maximum random additive jitter in seconds.
+
  * @property {string} baseUrl - The base URL for the API.
  * @property {string} apiKey - The API key used for authentication.
  * @property {number} apiTimeout - The timeout for API requests.
@@ -53,6 +59,11 @@ class LLMWhispererClient {
     apiKey = "",
     apiTimeout = 120,
     loggingLevel = "",
+    maxRetries = 4,
+    initialDelay = 2.0,
+    maxDelay = 60.0,
+    backoffFactor = 2.0,
+    jitter = 1.0,
   } = {}) {
     const level =
       loggingLevel || process.env.LLMWHISPERER_LOGGING_LEVEL || "debug";
@@ -75,6 +86,47 @@ class LLMWhispererClient {
 
     this.apiKey = apiKey || process.env.LLMWHISPERER_API_KEY || "";
     this.apiTimeout = apiTimeout;
+
+    this.retryMaxRetries = maxRetries;
+    this.retryInitialDelay = initialDelay;
+    this.retryMaxDelay = maxDelay;
+    this.retryBackoffFactor = backoffFactor;
+    this.retryJitter = jitter;
+
+    this.client = axios.create();
+    axiosRetry(this.client, {
+      retries: this.retryMaxRetries,
+      retryCondition: (error) => {
+        return (
+          axiosRetryModule.isNetworkError(error) ||
+          (error.response &&
+            (error.response.status >= 500 || error.response.status === 429))
+        );
+      },
+      retryDelay: (retryCount, error) => {
+        const calculated = Math.min(
+          this.retryInitialDelay *
+            Math.pow(this.retryBackoffFactor, retryCount - 1),
+          this.retryMaxDelay,
+        );
+        const retryAfterSec = axiosRetryModule.retryAfter(error) || 0;
+        const base = Math.max(calculated, retryAfterSec / 1000);
+        const jitterVal = Math.random() * this.retryJitter;
+        return (base + jitterVal) * 1000;
+      },
+      onRetry: (retryCount, error, requestConfig) => {
+        const status = error.response
+          ? error.response.status
+          : error.code || error.message;
+        this.logger.warn(
+          `Retry ${retryCount}/${this.retryMaxRetries} for ${requestConfig.url} (${status}). ` +
+            `Waiting before next attempt.`,
+        );
+        if (requestConfig._filePath) {
+          requestConfig.data = fs.createReadStream(requestConfig._filePath);
+        }
+      },
+    });
   }
 
   /**
@@ -90,7 +142,7 @@ class LLMWhispererClient {
     this.logger.debug(`url: ${url}`);
 
     try {
-      const response = await axios.get(url, {
+      const response = await this.client.get(url, {
         headers: { "unstract-key": this.apiKey },
         timeout: this.apiTimeout * 1000,
       });
@@ -189,15 +241,22 @@ class LLMWhispererClient {
         timeout: this.apiTimeout * 1000,
       };
 
+      // Disable retry for synchronous whisper (timeout > 0) since the
+      // server may have already started processing the document.
+      if (timeout > 0) {
+        options["axios-retry"] = { retries: 0 };
+      }
+
       if (!url) {
         const file = fs.createReadStream(filePath);
         const fileStats = fs.statSync(filePath);
         options.data = file;
+        options._filePath = filePath;
         options.headers["Content-Type"] = "application/octet-stream";
         options.headers["Content-Length"] = fileStats.size;
       }
 
-      const response = await axios(options);
+      const response = await this.client(options);
 
       if (response.status !== 200 && response.status !== 202) {
         const message = response.data;
@@ -241,7 +300,7 @@ class LLMWhispererClient {
     this.logger.debug(`url: ${url}`);
 
     try {
-      const response = await axios.get(url, {
+      const response = await this.client.get(url, {
         headers: { "unstract-key": this.apiKey },
         params,
         timeout: this.apiTimeout * 1000,
@@ -275,7 +334,7 @@ class LLMWhispererClient {
     this.logger.debug(`url: ${url}`);
 
     try {
-      const response = await axios.get(url, {
+      const response = await this.client.get(url, {
         headers: { "unstract-key": this.apiKey },
         params,
         timeout: this.apiTimeout * 1000,
@@ -311,7 +370,7 @@ class LLMWhispererClient {
     this.logger.debug(`url: ${url}`);
 
     try {
-      const response = await axios.post(url, searchText, {
+      const response = await this.client.post(url, searchText, {
         headers: {
           "unstract-key": this.apiKey,
           "Content-Type": "text/plain",
@@ -341,14 +400,28 @@ class LLMWhispererClient {
  * @param {string} [config.baseUrl=''] - The base URL for the API.
  * @param {string} [config.apiKey=''] - The API key for authentication.
  * @param {string} [config.loggingLevel=''] - The logging level (e.g., 'debug','info', 'warn', 'error').
- 
+ * @param {number} [config.maxRetries=4] - Maximum number of retry attempts (0 to disable retries).
+ * @param {number} [config.initialDelay=2.0] - Initial delay in seconds before the first retry.
+ * @param {number} [config.maxDelay=60.0] - Maximum delay cap in seconds between retries.
+ * @param {number} [config.backoffFactor=2.0] - Exponential multiplier for retry delay.
+ * @param {number} [config.jitter=1.0] - Maximum random additive jitter in seconds.
+
  * @property {string} baseUrl - The base URL for the API.
  * @property {string} apiKey - The API key used for authentication.
  * @property {string} loggingLevel - The logging level for the client.
  * @property {Object} logger - The logger used by the client. Initialized in the constructor.
  */
 class LLMWhispererClientV2 {
-  constructor({ baseUrl = "", apiKey = "", loggingLevel = "" } = {}) {
+  constructor({
+    baseUrl = "",
+    apiKey = "",
+    loggingLevel = "",
+    maxRetries = 4,
+    initialDelay = 2.0,
+    maxDelay = 60.0,
+    backoffFactor = 2.0,
+    jitter = 1.0,
+  } = {}) {
     const level =
       loggingLevel || process.env.LLMWHISPERER_LOGGING_LEVEL || "debug";
 
@@ -373,13 +446,48 @@ class LLMWhispererClientV2 {
 
     this.headers = {
       "unstract-key": this.apiKey,
-      // "Subscription-Id": "jsclient-client",
-      // "Subscription-Name": "jsclient-client",
-      // "User-Id": "jsclient-client-user",
-      // "Product-Id": "jsclient-client-product",
-      // "Product-Name": "jsclient-client-product",
-      // "Start-Date": "2024-07-09",
     };
+
+    this.retryMaxRetries = maxRetries;
+    this.retryInitialDelay = initialDelay;
+    this.retryMaxDelay = maxDelay;
+    this.retryBackoffFactor = backoffFactor;
+    this.retryJitter = jitter;
+
+    this.client = axios.create();
+    axiosRetry(this.client, {
+      retries: this.retryMaxRetries,
+      retryCondition: (error) => {
+        return (
+          axiosRetryModule.isNetworkError(error) ||
+          (error.response &&
+            (error.response.status >= 500 || error.response.status === 429))
+        );
+      },
+      retryDelay: (retryCount, error) => {
+        const calculated = Math.min(
+          this.retryInitialDelay *
+            Math.pow(this.retryBackoffFactor, retryCount - 1),
+          this.retryMaxDelay,
+        );
+        const retryAfterSec = axiosRetryModule.retryAfter(error) || 0;
+        const base = Math.max(calculated, retryAfterSec / 1000);
+        const jitterVal = Math.random() * this.retryJitter;
+        return (base + jitterVal) * 1000;
+      },
+      onRetry: (retryCount, error, requestConfig) => {
+        const status = error.response
+          ? error.response.status
+          : error.code || error.message;
+        this.logger.warn(
+          `Retry ${retryCount}/${this.retryMaxRetries} for ${requestConfig.url} (${status}). ` +
+            `Waiting before next attempt.`,
+        );
+        if (requestConfig._filePath) {
+          requestConfig.data = fs.createReadStream(requestConfig._filePath);
+        }
+      },
+    });
   }
 
   /**
@@ -395,7 +503,7 @@ class LLMWhispererClientV2 {
     this.logger.debug(`url: ${url}`);
 
     try {
-      const response = await axios.get(url, {
+      const response = await this.client.get(url, {
         headers: this.headers,
         timeout: this.apiTimeout * 1000,
       });
@@ -513,11 +621,12 @@ class LLMWhispererClientV2 {
         const file = fs.createReadStream(filePath);
         const fileStats = fs.statSync(filePath);
         options.data = file;
+        options._filePath = filePath;
         options.headers["Content-Type"] = "application/octet-stream";
         options.headers["Content-Length"] = fileStats.size;
       }
 
-      const response = await axios(options);
+      const response = await this.client(options);
 
       if (response.status !== 200 && response.status !== 202) {
         const message = response.data;
@@ -616,7 +725,7 @@ class LLMWhispererClientV2 {
     this.logger.debug(`headers: ${JSON.stringify(this.headers)}`);
 
     try {
-      const response = await axios.get(url, {
+      const response = await this.client.get(url, {
         headers: this.headers,
         params,
         timeout: this.apiTimeout * 1000,
@@ -652,7 +761,7 @@ class LLMWhispererClientV2 {
     this.logger.debug(`url: ${url}`);
 
     try {
-      const response = await axios.get(url, {
+      const response = await this.client.get(url, {
         headers: this.headers,
         params,
         timeout: this.apiTimeout * 1000,
@@ -697,19 +806,29 @@ class LLMWhispererClientV2 {
       headers: myHeaders,
       timeout: 200 * 1000,
       data: data,
+      "axios-retry": { retries: 0 },
     };
 
-    const response = await axios(options);
+    try {
+      const response = await this.client(options);
 
-    if (response.status !== 201) {
-      const message = response.data;
-      message.statusCode = response.status;
-      throw new LLMWhispererClientException(message.message, response.status);
-    } else {
-      return {
-        status_code: response.status,
-        message: response.data,
-      };
+      if (response.status !== 201) {
+        const message = response.data;
+        message.statusCode = response.status;
+        throw new LLMWhispererClientException(message.message, response.status);
+      } else {
+        return {
+          status_code: response.status,
+          message: response.data,
+        };
+      }
+    } catch (error) {
+      if (error instanceof LLMWhispererClientException) throw error;
+      const err = error.response
+        ? error.response.data
+        : { message: error.message };
+      err.statusCode = error.response ? error.response.status : -1;
+      throw new LLMWhispererClientException(err.message, err.statusCode);
     }
   }
 
@@ -741,17 +860,26 @@ class LLMWhispererClientV2 {
       data: data,
     };
 
-    const response = await axios(options);
+    try {
+      const response = await this.client(options);
 
-    if (response.status !== 200) {
-      const message = response.data;
-      message.statusCode = response.status;
-      throw new LLMWhispererClientException(message.message, response.status);
-    } else {
-      return {
-        status_code: response.status,
-        message: response.data,
-      };
+      if (response.status !== 200) {
+        const message = response.data;
+        message.statusCode = response.status;
+        throw new LLMWhispererClientException(message.message, response.status);
+      } else {
+        return {
+          status_code: response.status,
+          message: response.data,
+        };
+      }
+    } catch (error) {
+      if (error instanceof LLMWhispererClientException) throw error;
+      const err = error.response
+        ? error.response.data
+        : { message: error.message };
+      err.statusCode = error.response ? error.response.status : -1;
+      throw new LLMWhispererClientException(err.message, err.statusCode);
     }
   }
 
@@ -776,17 +904,26 @@ class LLMWhispererClientV2 {
       timeout: 200 * 1000,
     };
 
-    const response = await axios(options);
+    try {
+      const response = await this.client(options);
 
-    if (response.status !== 200) {
-      const message = response.data;
-      message.statusCode = response.status;
-      throw new LLMWhispererClientException(message.message, response.status);
-    } else {
-      return {
-        status_code: response.status,
-        message: response.data,
-      };
+      if (response.status !== 200) {
+        const message = response.data;
+        message.statusCode = response.status;
+        throw new LLMWhispererClientException(message.message, response.status);
+      } else {
+        return {
+          status_code: response.status,
+          message: response.data,
+        };
+      }
+    } catch (error) {
+      if (error instanceof LLMWhispererClientException) throw error;
+      const err = error.response
+        ? error.response.data
+        : { message: error.message };
+      err.statusCode = error.response ? error.response.status : -1;
+      throw new LLMWhispererClientException(err.message, err.statusCode);
     }
   }
 
@@ -811,17 +948,26 @@ class LLMWhispererClientV2 {
       timeout: 200 * 1000,
     };
 
-    const response = await axios(options);
+    try {
+      const response = await this.client(options);
 
-    if (response.status !== 200) {
-      const message = response.data;
-      message.statusCode = response.status;
-      throw new LLMWhispererClientException(message.message, response.status);
-    } else {
-      return {
-        status_code: response.status,
-        message: response.data,
-      };
+      if (response.status !== 200) {
+        const message = response.data;
+        message.statusCode = response.status;
+        throw new LLMWhispererClientException(message.message, response.status);
+      } else {
+        return {
+          status_code: response.status,
+          message: response.data,
+        };
+      }
+    } catch (error) {
+      if (error instanceof LLMWhispererClientException) throw error;
+      const err = error.response
+        ? error.response.data
+        : { message: error.message };
+      err.statusCode = error.response ? error.response.status : -1;
+      throw new LLMWhispererClientException(err.message, err.statusCode);
     }
   }
 
@@ -851,7 +997,7 @@ class LLMWhispererClientV2 {
     };
 
     try {
-      const response = await axios(url, {
+      const response = await this.client(url, {
         method: "GET",
         headers: this.headers,
         params: params,
