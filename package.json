@@ -1,6 +1,6 @@
 {
   "name": "llmwhisperer-client",
-  "version": "2.4.8",
+  "version": "2.4.9",
   "description": "LLMWhisper JS Client",
   "main": "index.js",
   "scripts": {
