@@ -9,6 +9,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: release
     steps:
       - uses: actions/checkout@v4
       # Setup .npmrc file to publish to npm
@@ -19,4 +20,4 @@ jobs:
       - run: npm ci
       - run: npm run build --if-present
       - run: npm test
-      - run: npm publish
+      - run: npm publish --provenance --access public
