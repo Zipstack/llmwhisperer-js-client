@@ -1,0 +1,25 @@
+# Git and GitHub
+.git
+.github
+.gitignore
+
+# Editor and IDE
+.vscode
+.claude
+
+# Development config
+.husky
+.nvmrc
+.eslintcache
+.prettierignore
+eslint.config.mjs
+prettier.config.js
+jest.config.js
+sample.env
+
+# Test files
+test
+
+# Documentation
+docs
+CODE_OF_CONDUCT.md
