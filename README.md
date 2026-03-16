@@ -54,7 +54,7 @@ The LLMWhisperer provides the following methods:
 - `whisper(options)`: Performs a whisper operation.
 - `whisperStatus(whisperHash)`: Retrieves the status of a whisper operation.
 - `whisperRetrieve(whisperHash)`: Retrieves the result of a whisper operation.
-- `whisperRetrieve(whisperHash)`: Retrieves the result of a whisper operation.
+- `whisperDetail(whisperHash)`: Retrieves metadata/details about a completed extraction job.
 - `whisperDetail(whisperHash)`: Retrieves metadata/details about a completed extraction job.
 - `highlightData(whisperHash, searchText)`: Highlights the specified text in the result of a whisper operation.
 
