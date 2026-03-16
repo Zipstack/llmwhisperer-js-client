@@ -2,7 +2,6 @@ const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const {
-  LLMWhispererClient,
   LLMWhispererClientV2,
   LLMWhispererClientException,
 } = require("../index");
@@ -74,15 +73,6 @@ function successResponse(data = {}, status = 200, headers = {}) {
   return { status, data, headers, statusText: "OK" };
 }
 
-function createV1Client(opts = {}) {
-  return new LLMWhispererClient({
-    baseUrl: "https://test.example.com/v1",
-    apiKey: "test-key",
-    loggingLevel: "error",
-    ...opts,
-  });
-}
-
 function createV2Client(opts = {}) {
   return new LLMWhispererClientV2({
     baseUrl: "https://test.example.com/v2",
@@ -93,15 +83,6 @@ function createV2Client(opts = {}) {
 }
 
 describe("Retry Configuration", () => {
-  test("V1 client stores retry configuration defaults", () => {
-    const client = createV1Client();
-    expect(client.retryMaxRetries).toBe(4);
-    expect(client.retryInitialDelay).toBe(2.0);
-    expect(client.retryMaxDelay).toBe(60.0);
-    expect(client.retryBackoffFactor).toBe(2.0);
-    expect(client.retryJitter).toBe(1.0);
-  });
-
   test("V2 client stores retry configuration defaults", () => {
     const client = createV2Client();
     expect(client.retryMaxRetries).toBe(4);
@@ -109,21 +90,6 @@ describe("Retry Configuration", () => {
     expect(client.retryMaxDelay).toBe(60.0);
     expect(client.retryBackoffFactor).toBe(2.0);
     expect(client.retryJitter).toBe(1.0);
-  });
-
-  test("V1 client accepts custom retry configuration", () => {
-    const client = createV1Client({
-      maxRetries: 10,
-      initialDelay: 5.0,
-      maxDelay: 120.0,
-      backoffFactor: 3.0,
-      jitter: 2.0,
-    });
-    expect(client.retryMaxRetries).toBe(10);
-    expect(client.retryInitialDelay).toBe(5.0);
-    expect(client.retryMaxDelay).toBe(120.0);
-    expect(client.retryBackoffFactor).toBe(3.0);
-    expect(client.retryJitter).toBe(2.0);
   });
 
   test("V2 client accepts custom retry configuration", () => {
@@ -141,217 +107,10 @@ describe("Retry Configuration", () => {
     expect(client.retryJitter).toBe(0.5);
   });
 
-  test("V1 client creates its own axios instance", () => {
-    const client = createV1Client();
-    expect(client.client).toBeDefined();
-    expect(client.client).not.toBe(axios);
-  });
-
   test("V2 client creates its own axios instance", () => {
     const client = createV2Client();
     expect(client.client).toBeDefined();
     expect(client.client).not.toBe(axios);
-  });
-});
-
-describe("V1 Retry on server errors", () => {
-  test("getUsageInfo retries on 503 then succeeds", async () => {
-    const client = createV1Client({ maxRetries: 2, jitter: 0 });
-    const adapter = mockAdapter([
-      errorResponse(503, "Service Unavailable"),
-      successResponse({ usage: "100" }),
-    ]);
-    client.client.defaults.adapter = adapter;
-
-    const result = await client.getUsageInfo();
-    expect(result).toEqual({ usage: "100" });
-  });
-
-  test("getUsageInfo retries on 429 then succeeds", async () => {
-    const client = createV1Client({ maxRetries: 2, jitter: 0 });
-    const adapter = mockAdapter([
-      errorResponse(429, "Rate limited"),
-      successResponse({ usage: "100" }),
-    ]);
-    client.client.defaults.adapter = adapter;
-
-    const result = await client.getUsageInfo();
-    expect(result).toEqual({ usage: "100" });
-  });
-
-  test("getUsageInfo retries on network error then succeeds", async () => {
-    const client = createV1Client({ maxRetries: 2, jitter: 0 });
-    const adapter = mockAdapter([
-      networkError("ECONNRESET"),
-      successResponse({ usage: "100" }),
-    ]);
-    client.client.defaults.adapter = adapter;
-
-    const result = await client.getUsageInfo();
-    expect(result).toEqual({ usage: "100" });
-  });
-
-  test("whisperStatus retries on 500 then succeeds", async () => {
-    const client = createV1Client({ maxRetries: 2, jitter: 0 });
-    const adapter = mockAdapter([
-      errorResponse(500, "Internal Server Error"),
-      successResponse({ status: "processed" }),
-    ]);
-    client.client.defaults.adapter = adapter;
-
-    const result = await client.whisperStatus("test-hash");
-    expect(result.status).toBe("processed");
-  });
-
-  test("whisperRetrieve retries on 502 then succeeds", async () => {
-    const client = createV1Client({ maxRetries: 2, jitter: 0 });
-    const adapter = mockAdapter([
-      errorResponse(502, "Bad Gateway"),
-      successResponse("extracted text here"),
-    ]);
-    client.client.defaults.adapter = adapter;
-
-    const result = await client.whisperRetrieve("test-hash");
-    expect(result.extracted_text).toBe("extracted text here");
-  });
-
-  test("highlightData retries on 503 then succeeds", async () => {
-    const client = createV1Client({ maxRetries: 2, jitter: 0 });
-    const adapter = mockAdapter([
-      errorResponse(503, "Service Unavailable"),
-      successResponse({ highlights: [] }),
-    ]);
-    client.client.defaults.adapter = adapter;
-
-    const result = await client.highlightData("hash", "search text");
-    expect(result).toEqual({ highlights: [], statusCode: 200 });
-  });
-});
-
-describe("V1 No retry on client errors", () => {
-  test("getUsageInfo does NOT retry on 400", async () => {
-    const client = createV1Client({ maxRetries: 3, jitter: 0 });
-    let callCount = 0;
-    client.client.defaults.adapter = (config) => {
-      callCount++;
-      const err = new Error("Bad Request");
-      err.response = { status: 400, data: { message: "Bad Request" }, headers: {} };
-      err.config = config;
-      err.isAxiosError = true;
-      return Promise.reject(err);
-    };
-
-    await expect(client.getUsageInfo()).rejects.toThrow(LLMWhispererClientException);
-    expect(callCount).toBe(1);
-  });
-
-  test("getUsageInfo does NOT retry on 401", async () => {
-    const client = createV1Client({ maxRetries: 3, jitter: 0 });
-    let callCount = 0;
-    client.client.defaults.adapter = (config) => {
-      callCount++;
-      const err = new Error("Unauthorized");
-      err.response = { status: 401, data: { message: "Unauthorized" }, headers: {} };
-      err.config = config;
-      err.isAxiosError = true;
-      return Promise.reject(err);
-    };
-
-    await expect(client.getUsageInfo()).rejects.toThrow(LLMWhispererClientException);
-    expect(callCount).toBe(1);
-  });
-
-  test("getUsageInfo does NOT retry on 404", async () => {
-    const client = createV1Client({ maxRetries: 3, jitter: 0 });
-    let callCount = 0;
-    client.client.defaults.adapter = (config) => {
-      callCount++;
-      const err = new Error("Not Found");
-      err.response = { status: 404, data: { message: "Not Found" }, headers: {} };
-      err.config = config;
-      err.isAxiosError = true;
-      return Promise.reject(err);
-    };
-
-    await expect(client.getUsageInfo()).rejects.toThrow(LLMWhispererClientException);
-    expect(callCount).toBe(1);
-  });
-});
-
-describe("V1 Retry exhaustion and disable", () => {
-  test("retry exhaustion throws after maxRetries attempts", async () => {
-    const client = createV1Client({ maxRetries: 2, jitter: 0, initialDelay: 0.1 });
-    let callCount = 0;
-    client.client.defaults.adapter = (config) => {
-      callCount++;
-      const err = new Error("Service Unavailable");
-      err.response = { status: 503, data: { message: "Service Unavailable" }, headers: {} };
-      err.config = config;
-      err.isAxiosError = true;
-      return Promise.reject(err);
-    };
-
-    await expect(client.getUsageInfo()).rejects.toThrow(LLMWhispererClientException);
-    // 1 initial + 2 retries = 3 total
-    expect(callCount).toBe(3);
-  });
-
-  test("maxRetries=0 disables retries", async () => {
-    const client = createV1Client({ maxRetries: 0, jitter: 0 });
-    let callCount = 0;
-    client.client.defaults.adapter = (config) => {
-      callCount++;
-      const err = new Error("Service Unavailable");
-      err.response = { status: 503, data: { message: "Service Unavailable" }, headers: {} };
-      err.config = config;
-      err.isAxiosError = true;
-      return Promise.reject(err);
-    };
-
-    await expect(client.getUsageInfo()).rejects.toThrow(LLMWhispererClientException);
-    expect(callCount).toBe(1);
-  });
-});
-
-describe("V1 whisper retry control", () => {
-  test("whisper with timeout=0 (async) retries on 503", async () => {
-    const client = createV1Client({ maxRetries: 2, jitter: 0 });
-    const adapter = mockAdapter([
-      errorResponse(503, "Service Unavailable"),
-      successResponse(
-        { whisper_hash: "abc123", statusCode: 202 },
-        202,
-        { "whisper-hash": "abc123" },
-      ),
-    ]);
-    client.client.defaults.adapter = adapter;
-
-    const result = await client.whisper({
-      url: "https://example.com/doc.pdf",
-      timeout: 0,
-    });
-    expect(result.whisper_hash).toBe("abc123");
-  });
-
-  test("whisper with timeout>0 (sync) does NOT retry on 503", async () => {
-    const client = createV1Client({ maxRetries: 3, jitter: 0 });
-    let callCount = 0;
-    client.client.defaults.adapter = (config) => {
-      callCount++;
-      const err = new Error("Service Unavailable");
-      err.response = { status: 503, data: { message: "Service Unavailable" }, headers: {} };
-      err.config = config;
-      err.isAxiosError = true;
-      return Promise.reject(err);
-    };
-
-    await expect(
-      client.whisper({
-        url: "https://example.com/doc.pdf",
-        timeout: 60,
-      }),
-    ).rejects.toThrow(LLMWhispererClientException);
-    expect(callCount).toBe(1);
   });
 });
 
@@ -455,7 +214,7 @@ describe("V2 Retry Behavior", () => {
 
 describe("Retry-After header", () => {
   test("429 with Retry-After header is respected", async () => {
-    const client = createV1Client({ maxRetries: 1, jitter: 0, initialDelay: 0.1 });
+    const client = createV2Client({ maxRetries: 1, jitter: 0, initialDelay: 0.1 });
     const adapter = mockAdapter([
       // 429 with Retry-After of 1 second
       (() => {
@@ -492,24 +251,6 @@ describe("Backoff delay calculation", () => {
 });
 
 describe("File stream re-creation", () => {
-  test("V1 whisper with filePath attaches _filePath to config for retry", async () => {
-    const testFilePath = path.join(__dirname, "data", "credit_card.pdf");
-    const client = createV1Client({ maxRetries: 1, jitter: 0 });
-    let capturedConfig;
-    client.client.defaults.adapter = (config) => {
-      capturedConfig = config;
-      return Promise.resolve({
-        status: 200,
-        data: "extracted text",
-        headers: { "whisper-hash": "hash123" },
-        config,
-      });
-    };
-
-    await client.whisper({ filePath: testFilePath, timeout: 0 });
-    expect(capturedConfig._filePath).toBe(testFilePath);
-  });
-
   test("V2 whisper with filePath attaches _filePath to config for retry", async () => {
     const testFilePath = path.join(__dirname, "data", "credit_card.pdf");
     const client = createV2Client({ maxRetries: 1, jitter: 0 });
@@ -530,7 +271,7 @@ describe("File stream re-creation", () => {
 
   test("onRetry re-creates file stream when _filePath is set", async () => {
     const testFilePath = path.join(__dirname, "data", "credit_card.pdf");
-    const client = createV1Client({ maxRetries: 1, jitter: 0 });
+    const client = createV2Client({ maxRetries: 1, jitter: 0 });
     let callCount = 0;
     let secondCallData;
     client.client.defaults.adapter = (config) => {
@@ -544,14 +285,14 @@ describe("File stream re-creation", () => {
       }
       secondCallData = config.data;
       return Promise.resolve({
-        status: 200,
-        data: "extracted text",
-        headers: { "whisper-hash": "hash123" },
+        status: 202,
+        data: { whisper_hash: "v2hash" },
+        headers: {},
         config,
       });
     };
 
-    await client.whisper({ filePath: testFilePath, timeout: 0 });
+    await client.whisper({ filePath: testFilePath });
     expect(callCount).toBe(2);
     // The data should be a fresh ReadStream (re-created by onRetry)
     expect(secondCallData).toBeDefined();
@@ -561,7 +302,7 @@ describe("File stream re-creation", () => {
 
 describe("Logging on retries", () => {
   test("onRetry logs a warning message", async () => {
-    const client = createV1Client({ maxRetries: 1, jitter: 0 });
+    const client = createV2Client({ maxRetries: 1, jitter: 0 });
     const adapter = mockAdapter([
       errorResponse(503, "Service Unavailable"),
       successResponse({ usage: "100" }),
