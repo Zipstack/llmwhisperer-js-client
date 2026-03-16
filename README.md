@@ -54,7 +54,53 @@ The LLMWhisperer provides the following methods:
 - `whisper(options)`: Performs a whisper operation.
 - `whisperStatus(whisperHash)`: Retrieves the status of a whisper operation.
 - `whisperRetrieve(whisperHash)`: Retrieves the result of a whisper operation.
+- `whisperDetail(whisperHash)`: Retrieves metadata/details about a completed extraction job.
 - `highlightData(whisperHash, searchText)`: Highlights the specified text in the result of a whisper operation.
+
+## Running Tests
+
+### Environment Setup
+
+Copy the sample environment file and fill in your API key:
+
+```bash
+cp sample.env .env
+```
+
+Then edit `.env` and set the required values:
+
+```
+LLMWHISPERER_API_KEY=<your API key>
+LLMWHISPERER_BASE_URL_V2=https://llmwhisperer-api.us-central.unstract.com/api/v2
+LLMWHISPERER_LOGGING_LEVEL=DEBUG
+```
+
+`LLMWHISPERER_API_KEY` is required for integration tests. The other variables are optional and have sensible defaults.
+
+### Run All Tests
+
+```bash
+npm install
+npm test
+```
+
+### Run a Specific Test File
+
+```bash
+npx jest --runInBand test/retry.test.js
+npx jest --runInBand test/test.js
+```
+
+### Run a Specific Test by Name
+
+```bash
+npx jest --runInBand -t "test name pattern"
+```
+
+The test suite includes:
+
+- **`test/test.js`** — Integration tests that call the live LLMWhisperer API (requires a valid `LLMWHISPERER_API_KEY`)
+- **`test/retry.test.js`** — Unit tests for retry behavior (mocked, no API key needed)
 
 ## Error Handling
 
