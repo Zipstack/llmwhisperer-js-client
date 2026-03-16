@@ -626,6 +626,7 @@ class LLMWhispererClientV2 {
     const url = `${this.baseUrl}/whisper-detail`;
     const params = { whisper_hash: whisperHash };
     this.logger.debug(`url: ${url}`);
+    this.logger.debug(`params: ${JSON.stringify(params)}`);
 
     try {
       const response = await this.client.get(url, {
