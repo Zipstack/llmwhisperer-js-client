@@ -250,7 +250,7 @@ class LLMWhispererClientV2 {
       const options = {
         method: "post",
         url: apiUrl,
-        headers: this.headers,
+        headers: { ...this.headers },
         params,
         timeout: 200 * 1000,
       };
@@ -359,8 +359,6 @@ class LLMWhispererClientV2 {
     const params = { whisper_hash: whisperHash };
     this.logger.debug(`url: ${url}`);
     this.logger.debug(`params: ${JSON.stringify(params)}`);
-    delete this.headers["Content-Length"];
-    this.logger.debug(`headers: ${JSON.stringify(this.headers)}`);
 
     try {
       const response = await this.client.get(url, {
