@@ -72,7 +72,7 @@ Then edit `.env` and set the required values:
 ```
 LLMWHISPERER_API_KEY=<your API key>
 LLMWHISPERER_BASE_URL_V2=https://llmwhisperer-api.us-central.unstract.com/api/v2
-LLMWHISPERER_LOG_LEVEL=DEBUG
+LLMWHISPERER_LOGGING_LEVEL=DEBUG
 ```
 
 `LLMWHISPERER_API_KEY` is required for integration tests. The other variables are optional and have sensible defaults.
