@@ -199,6 +199,18 @@ describe("V2 Retry Behavior", () => {
     expect(result.status_code).toBe(200);
   });
 
+  test("whisperDetail retries on 503 then succeeds", async () => {
+    const client = createV2Client({ maxRetries: 2, jitter: 0 });
+    const adapter = mockAdapter([
+      errorResponse(503, "Service Unavailable"),
+      successResponse({ whisper_hash: "abc", mode: "ocr" }),
+    ]);
+    client.client.defaults.adapter = adapter;
+
+    const result = await client.whisperDetail("abc");
+    expect(result).toEqual({ whisper_hash: "abc", mode: "ocr" });
+  });
+
   test("getHighlightData retries on 503 then succeeds", async () => {
     const client = createV2Client({ maxRetries: 2, jitter: 0 });
     const adapter = mockAdapter([
