@@ -189,7 +189,7 @@ class LLMWhispererClientV2 {
    *                                       value falls below the configured threshold is ignored and excluded
    *                                       from the final output. This parameter works only with "form",
    *                                       "high_quality" and "table" modes.
-
+   *
    * @returns {Promise<Object>} The response from the whisper API.
    * @throws {LLMWhispererClientException} If there is an error in the request.
    */
