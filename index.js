@@ -184,7 +184,12 @@ class LLMWhispererClientV2 {
    * @param {boolean} [options.addLineNos=false] - If true, adds line numbers to the extracted text
    *                                       and saves line metadata, which can be queried later
    *                                       using the highlights API.
-
+   * @param {number} [options.wordConfidenceThreshold=0.3] - The minimum OCR confidence score a word must
+   *                                       have to be included in the extracted text. Any text whose confidence
+   *                                       value falls below the configured threshold is ignored and excluded
+   *                                       from the final output. This parameter works only with "form",
+   *                                       "high_quality" and "table" modes.
+   *
    * @returns {Promise<Object>} The response from the whisper API.
    * @throws {LLMWhispererClientException} If there is an error in the request.
    */
@@ -210,6 +215,7 @@ class LLMWhispererClientV2 {
     waitForCompletion = false,
     waitTimeout = 180,
     addLineNos = false,
+    wordConfidenceThreshold = 0.3,
   } = {}) {
     this.logger.debug("whisper called");
     const apiUrl = `${this.baseUrl}/whisper`;
@@ -234,6 +240,7 @@ class LLMWhispererClientV2 {
       wait_for_completion: waitForCompletion,
       wait_timeout: waitTimeout,
       add_line_nos: addLineNos,
+      word_confidence_threshold: wordConfidenceThreshold,
     };
 
     this.logger.debug(`api_url: ${apiUrl}`);

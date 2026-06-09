@@ -328,3 +328,42 @@ describe("Logging on retries", () => {
     expect(warnCall).toMatch(/503/);
   });
 });
+
+describe("whisper word_confidence_threshold param", () => {
+  test("forwards a custom wordConfidenceThreshold as word_confidence_threshold", async () => {
+    const client = createV2Client();
+    let capturedConfig;
+    client.client.defaults.adapter = (config) => {
+      capturedConfig = config;
+      return Promise.resolve({
+        status: 202,
+        data: { whisper_hash: "h" },
+        headers: {},
+        config,
+      });
+    };
+
+    await client.whisper({
+      url: "https://example.com/doc.pdf",
+      wordConfidenceThreshold: 0.7,
+    });
+    expect(capturedConfig.params.word_confidence_threshold).toBe(0.7);
+  });
+
+  test("sends the default word_confidence_threshold of 0.3 when omitted", async () => {
+    const client = createV2Client();
+    let capturedConfig;
+    client.client.defaults.adapter = (config) => {
+      capturedConfig = config;
+      return Promise.resolve({
+        status: 202,
+        data: { whisper_hash: "h" },
+        headers: {},
+        config,
+      });
+    };
+
+    await client.whisper({ url: "https://example.com/doc.pdf" });
+    expect(capturedConfig.params.word_confidence_threshold).toBe(0.3);
+  });
+});
