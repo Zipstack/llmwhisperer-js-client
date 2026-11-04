@@ -7,8 +7,22 @@ const LLMWhispererClientException = require("../index").LLMWhispererClientExcept
 
 const API_KEY = process.env.LLMWHISPERER_API_KEY;
 
-// What the service returns in place of a stored, non-empty webhook auth_token
+// What the service returns in place of a stored, non-empty webhook auth_token.
+// A token longer than WEBHOOK_AUTH_TOKEN_VISIBLE_CHARS characters also shows its
+// last WEBHOOK_AUTH_TOKEN_VISIBLE_CHARS characters after the mask.
 const WEBHOOK_AUTH_TOKEN_MASK = "********";
+const WEBHOOK_AUTH_TOKEN_VISIBLE_CHARS = 4;
+
+// Returns the auth_token as the service shows it on read
+function maskedWebhookAuthToken(token) {
+  if (!token) {
+    return "";
+  }
+  if (token.length <= WEBHOOK_AUTH_TOKEN_VISIBLE_CHARS) {
+    return WEBHOOK_AUTH_TOKEN_MASK;
+  }
+  return WEBHOOK_AUTH_TOKEN_MASK + token.slice(-WEBHOOK_AUTH_TOKEN_VISIBLE_CHARS);
+}
 
 // Checks a getWebhookDetails response against what was registered. The service
 // masks a stored token on read and leaves an empty one empty; environments that
@@ -18,11 +32,7 @@ function expectWebhookDetails(response, { url, authToken, webhookName }) {
   expect(Object.keys(response.message).sort()).toEqual(["auth_token", "url", "webhook_name"]);
   expect(response.message.url).toBe(url);
   expect(response.message.webhook_name).toBe(webhookName);
-  if (authToken) {
-    expect([authToken, WEBHOOK_AUTH_TOKEN_MASK]).toContain(response.message.auth_token);
-  } else {
-    expect(response.message.auth_token).toBe("");
-  }
+  expect([authToken, maskedWebhookAuthToken(authToken)]).toContain(response.message.auth_token);
 }
 
 describe("LLMWhispererClientV2", () => {
