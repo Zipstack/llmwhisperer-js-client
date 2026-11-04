@@ -7,6 +7,34 @@ const LLMWhispererClientException = require("../index").LLMWhispererClientExcept
 
 const API_KEY = process.env.LLMWHISPERER_API_KEY;
 
+// What the service returns in place of a stored, non-empty webhook auth_token.
+// A token longer than WEBHOOK_AUTH_TOKEN_VISIBLE_CHARS characters also shows its
+// last WEBHOOK_AUTH_TOKEN_VISIBLE_CHARS characters after the mask.
+const WEBHOOK_AUTH_TOKEN_MASK = "********";
+const WEBHOOK_AUTH_TOKEN_VISIBLE_CHARS = 4;
+
+// Returns the auth_token as the service shows it on read
+function maskedWebhookAuthToken(token) {
+  if (!token) {
+    return "";
+  }
+  if (token.length <= WEBHOOK_AUTH_TOKEN_VISIBLE_CHARS) {
+    return WEBHOOK_AUTH_TOKEN_MASK;
+  }
+  return WEBHOOK_AUTH_TOKEN_MASK + token.slice(-WEBHOOK_AUTH_TOKEN_VISIBLE_CHARS);
+}
+
+// Checks a getWebhookDetails response against what was registered. The service
+// masks a stored token on read and leaves an empty one empty; environments that
+// do not mask yet echo the token, so both are accepted.
+function expectWebhookDetails(response, { url, authToken, webhookName }) {
+  expect(response.status_code).toBe(200);
+  expect(Object.keys(response.message).sort()).toEqual(["auth_token", "url", "webhook_name"]);
+  expect(response.message.url).toBe(url);
+  expect(response.message.webhook_name).toBe(webhookName);
+  expect([authToken, maskedWebhookAuthToken(authToken)]).toContain(response.message.auth_token);
+}
+
 describe("LLMWhispererClientV2", () => {
   if (!API_KEY) {
     test.skip("skipped: LLMWHISPERER_API_KEY not set", () => {});
@@ -139,21 +167,13 @@ describe("LLMWhispererClientV2", () => {
 
     const getResponse = await client.getWebhookDetails(webhookName);
 
-    expect(getResponse).toEqual({
-      status_code: 200, message: {
-        auth_token: token, url: url, webhook_name: webhookName
-      }
-    });
+    expectWebhookDetails(getResponse, { url, authToken: token, webhookName });
 
     const updateResponse = await client.updateWebhookDetails(webhookName, url, "new_token");
     expect(updateResponse).toEqual({ status_code: 200, message: { message: 'Webhook updated successfully' } });
 
     const getUpdatedResponse = await client.getWebhookDetails(webhookName);
-    expect(getUpdatedResponse).toEqual({
-      status_code: 200, message: {
-        auth_token: "new_token", url: url, webhook_name: webhookName
-      }
-    });
+    expectWebhookDetails(getUpdatedResponse, { url, authToken: "new_token", webhookName });
 
     const deleteResponse = await client.deleteWebhookDetails(webhookName);
     expect(deleteResponse).toEqual({ status_code: 200, message: { message: 'Webhook deleted successfully' } });
