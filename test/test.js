@@ -7,6 +7,24 @@ const LLMWhispererClientException = require("../index").LLMWhispererClientExcept
 
 const API_KEY = process.env.LLMWHISPERER_API_KEY;
 
+// What the service returns in place of a stored, non-empty webhook auth_token
+const WEBHOOK_AUTH_TOKEN_MASK = "********";
+
+// Checks a getWebhookDetails response against what was registered. The service
+// masks a stored token on read and leaves an empty one empty; environments that
+// do not mask yet echo the token, so both are accepted.
+function expectWebhookDetails(response, { url, authToken, webhookName }) {
+  expect(response.status_code).toBe(200);
+  expect(Object.keys(response.message).sort()).toEqual(["auth_token", "url", "webhook_name"]);
+  expect(response.message.url).toBe(url);
+  expect(response.message.webhook_name).toBe(webhookName);
+  if (authToken) {
+    expect([authToken, WEBHOOK_AUTH_TOKEN_MASK]).toContain(response.message.auth_token);
+  } else {
+    expect(response.message.auth_token).toBe("");
+  }
+}
+
 describe("LLMWhispererClientV2", () => {
   if (!API_KEY) {
     test.skip("skipped: LLMWHISPERER_API_KEY not set", () => {});
@@ -139,21 +157,13 @@ describe("LLMWhispererClientV2", () => {
 
     const getResponse = await client.getWebhookDetails(webhookName);
 
-    expect(getResponse).toEqual({
-      status_code: 200, message: {
-        auth_token: token, url: url, webhook_name: webhookName
-      }
-    });
+    expectWebhookDetails(getResponse, { url, authToken: token, webhookName });
 
     const updateResponse = await client.updateWebhookDetails(webhookName, url, "new_token");
     expect(updateResponse).toEqual({ status_code: 200, message: { message: 'Webhook updated successfully' } });
 
     const getUpdatedResponse = await client.getWebhookDetails(webhookName);
-    expect(getUpdatedResponse).toEqual({
-      status_code: 200, message: {
-        auth_token: "new_token", url: url, webhook_name: webhookName
-      }
-    });
+    expectWebhookDetails(getUpdatedResponse, { url, authToken: "new_token", webhookName });
 
     const deleteResponse = await client.deleteWebhookDetails(webhookName);
     expect(deleteResponse).toEqual({ status_code: 200, message: { message: 'Webhook deleted successfully' } });
